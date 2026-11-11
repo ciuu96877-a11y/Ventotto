@@ -12,8 +12,18 @@ void fragment(){
     float pools=smoothstep(.48,.68,noise(p*.31)*.7+noise(p*.82)*.3)*wetness;
     vec3 road=texture(road_texture,p*.48).rgb*tint.rgb;
     ALBEDO=road*mix(1.0,.59,wetness)*mix(1.0,.71,pools);
-    ROUGHNESS=mix(.89,.25,wetness)*(1.0-pools)+pools*.065;
-    SPECULAR=mix(.35,.8,wetness);
-    float ripple=sin(length(fract(p*2.0)-vec2(.5))*80.0-weather_time*19.0)*.012*pools;
-    NORMAL_MAP=normalize(vec3(ripple,ripple*.6,1.0))*.5+.5;
+    ROUGHNESS=mix(.89,.43,wetness)*(1.0-pools)+pools*.23;
+    SPECULAR=mix(.35,.5,wetness);
+    // Sparse short-lived rings, filtered at distance instead of repeating waves.
+    vec2 cell=floor(p*1.8);
+    float seed=hash(cell);
+    vec2 center=vec2(hash(cell+vec2(3.1,9.4)),hash(cell+vec2(8.7,1.2)))*.5+.25;
+    vec2 offset=(fract(p*1.8)-center)/1.8;
+    float radius=length(offset);
+    float age=fract(weather_time*1.1+seed*6.0);
+    float width=max(.016,fwidth(radius)*1.5);
+    float ring=exp(-pow((radius-age*.23)/width,2.0));
+    float fade=(1.0-age)*smoothstep(.0,.12,age)*step(.58,seed);
+    vec2 ripple=offset/max(radius,.001)*ring*fade*.009*pools;
+    NORMAL_MAP=normalize(vec3(ripple,1.0))*.5+.5;
 }

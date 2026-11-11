@@ -72,7 +72,7 @@ var third_person := false
 var third_pivot: Node3D
 var third_arm: SpringArm3D
 var third_view: Camera3D
-var third_yaw := 0.0
+var third_yaw := -0.45
 var third_pitch := -0.24
 var driver: Node3D
 var weather: Node3D

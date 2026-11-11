@@ -70,7 +70,7 @@ func text(content: String,size: int,tint: Color,weight := false) -> Label:
     n.add_theme_font_size_override("font_size",size)
     n.add_theme_color_override("font_color",tint)
     if OS.has_feature("web"):
-        n.text = content.replace("◆",">").replace("◉","П").replace("●","*").replace("○","o").replace("←","<").replace("↵","Enter")
+        n.text = content.replace("◆",">").replace("◉","П").replace("●","*").replace("○","o").replace("←","<").replace("→",">").replace("↵","Enter")
     if weight: n.add_theme_font_override("font",bold)
     return n
 
@@ -296,7 +296,7 @@ func setup(game: Node) -> void:
     summary.add_child(text("F — открыть двери и дождаться пассажиров.\nK — питание, Z — реверсор вперёд.\nQ × 4 — отпустить тормоз, D — дать тягу.",15,WHITE))
     summary.add_child(text("Мышь — осмотр кабины и управление приборами.\nR — камера, Tab — маршрут, M — озвучка, Esc — пауза.",13,FAINT))
     action_button = Button.new()
-    action_button.text = "Играть   ↵"
+    action_button.text = "Играть · Enter"
     action_button.custom_minimum_size.y = 43
     action_button.add_theme_font_override("font",bold)
     action_button.add_theme_font_size_override("font_size",16)
@@ -357,7 +357,7 @@ func setup(game: Node) -> void:
 
 func menu_button(title: String) -> Button:
     var b := Button.new()
-    b.text = title
+    b.text = title.replace("←", "<").replace("↵", "Enter") if OS.has_feature("web") else title
     b.custom_minimum_size.y = 40
     b.add_theme_font_override("font",bold)
     b.add_theme_font_size_override("font_size",16)
@@ -390,7 +390,7 @@ func show_menu(open: bool) -> void:
         run_started = true
         modes.hide()
         title_card.show()
-        action_button.text = "Продолжить рейс   ↵"
+        action_button.text = "Продолжить рейс · Enter"
 
 func toggle_route() -> void:
     show_route = not show_route
@@ -416,6 +416,7 @@ func refresh(g: Node) -> void:
     if map_panel.visible:
         for i in route_nodes.size():
             var marker := "●" if i<g.next_stop else ("◆" if i==g.next_stop else "○")
+            if OS.has_feature("web"): marker=marker.replace("◆",">").replace("●","*").replace("○","o")
             route_nodes[i].text = "%s   %s" % [marker,g.Route.NAMES[i]]
             route_nodes[i].modulate = GREEN if i<g.next_stop else (AMBER if i==g.next_stop else WHITE)
     goal.text = "%s  ·  %d м" % [next,roundi(absf(meters))]
@@ -446,7 +447,7 @@ func refresh(g: Node) -> void:
     elif g.reverser==0:
         msg = "Z — перевести реверсор"
     elif g.brake>0 and kmh==0:
-        msg = "Q — отпустить тормоз (%d → 0)" % g.brake
+        msg = "Q — отпустить тормоз: %d" % g.brake
     elif not g.event_hint().is_empty():
         msg = g.event_hint()
     elif g.derailed:

@@ -1,0 +1,15 @@
+# Keep the game source in this repository; ignore tools, caches and exports.
+/work/
+/outputs/*
+!/outputs/Ventotto/
+**/.godot/
+**/.DS_Store
+**/Thumbs.db
+**/*.tmp
+**/*.log
+**/.env
+**/.env.*
+**/export_credentials.cfg
+/outputs/Ventotto/web_chunks/
+/outputs/Ventotto/web_shared/
+

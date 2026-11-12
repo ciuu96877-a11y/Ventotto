@@ -7,6 +7,8 @@ const CrashBody = preload("res://crash_body.gd")
 const TrackCollision = preload("res://track_collision.gd")
 const Driver = preload("res://driver.gd")
 const Weather = preload("res://weather.gd")
+const PassengerEvents = preload("res://passenger_events.gd")
+const Preferences = preload("res://preferences.gd")
 const Cab = preload("res://cab.gd")
 const Display = preload("res://display.gd")
 const CAST = ["luca","giulia","samir","elena","amina","marco","mei","matteo","babusia","anna","ravi","didus","sofia","enzo","fatima","yuki","nadia","pietro","ada","noah","clara","ren"]
@@ -76,6 +78,8 @@ var third_yaw := -0.45
 var third_pitch := -0.24
 var driver: Node3D
 var weather: Node3D
+var encounters: Node
+var preferences: Node
 var crash_still_time := 0.0
 var rain_loop: AudioStreamPlayer
 var web_chunk_timer := 0.0
@@ -205,8 +209,15 @@ func _ready() -> void:
     ui = Display.new()
     add_child(ui)
     ui.setup(self)
+    preferences=Preferences.new()
+    add_child(preferences)
+    preferences.setup(self)
+    encounters=PassengerEvents.new()
+    add_child(encounters)
+    encounters.setup(self)
     if OS.has_feature("web"): print("WEB_INIT: audio")
     setup_audio()
+    preferences.apply()
     move_vehicle()
     update_view()
     if OS.has_feature("web"):
@@ -326,7 +337,7 @@ func start() -> void:
     if difficulty==2: rain_loop.stream_paused = false
     announcements.stream_paused = false
     ui.show_menu(false)
-    Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+    Input.mouse_mode = Input.MOUSE_MODE_VISIBLE if encounters.interacting and encounters.phase!="fight" else Input.MOUSE_MODE_CAPTURED
 
 func pause() -> void:
     paused = true
@@ -354,7 +365,8 @@ func update_camera(dt: float) -> void:
     var target_heading := atan2(forward.x, forward.z)
     third_pivot.global_position = third_pivot.global_position.lerp(vehicle.global_position + Vector3.UP * 1.8, 1.0-exp(-dt*9.0))
     third_arm.rotation = Vector3(third_pitch, PI + target_heading + third_yaw, 0)
-    driver.animate_controls(cab, dt)
+    driver.animate_controls(cab, 0.0 if paused else dt)
+    if encounters!=null: encounters.update_view()
     weather.update_weather(dt, third_view if third_person else view, wiper, paused)
     if difficulty==2 and rain_loop!=null:
         rain_loop.volume_db=lerpf(rain_loop.volume_db,-13.0 if third_person else -22.0,minf(dt*3.0,1.0))
@@ -363,13 +375,14 @@ func update_view() -> void:
     view.rotation = Vector3(pitch,PI+yaw,0)
 
 func _input(event: InputEvent) -> void:
+    if encounters!=null and encounters.handle_input(event): return
     if event is InputEventMouseMotion and driving and not paused:
         if third_person:
-            third_yaw -= event.relative.x * 0.003
-            third_pitch = clampf(third_pitch-event.relative.y*0.0025, -1.1, 0.25)
+            third_yaw -= event.relative.x * 0.003*preferences.sensitivity
+            third_pitch = clampf(third_pitch-event.relative.y*0.0025*preferences.sensitivity, -1.1, 0.25)
             return
-        yaw = clampf(yaw-event.relative.x*.0022,-2.11,2.11)
-        pitch = clampf(pitch-event.relative.y*.0022,-1.14,.43)
+        yaw = clampf(yaw-event.relative.x*.0022*preferences.sensitivity,-2.11,2.11)
+        pitch = clampf(pitch-event.relative.y*.0022*preferences.sensitivity,-1.14,.43)
         update_view()
     if event is InputEventMouseButton and event.pressed and driving and not paused and not derailed and not third_person:
         if event.button_index==MOUSE_BUTTON_LEFT:
@@ -381,7 +394,11 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_key_input(event: InputEvent) -> void:
     if not event is InputEventKey or not event.pressed or event.echo: return
+    if encounters!=null and encounters.interacting and event.physical_keycode!=KEY_ESCAPE: return
     var key := (event as InputEventKey).physical_keycode
+    if preferences.opened:
+        if key==KEY_ESCAPE:preferences.close_settings()
+        return
     if key==KEY_R:
         toggle_camera()
         return
@@ -420,6 +437,7 @@ func notify(message: String) -> void:
     notice_left = 3.0
 
 func operate(which: String, delta: int) -> void:
+    if cab.controls.has(which): driver.touch_control(which)
     match which:
         "traction":
             throttle = clampi(throttle+delta,0,5)
@@ -496,7 +514,7 @@ func toggle_doors() -> void:
         sound("air")
 
 func traction_allowed() -> bool:
-    return master and reverser!=0 and brake==0 and not emergency and not doors_open and opened_amount<.01 and not finished
+    return master and reverser!=0 and brake==0 and not emergency and not doors_open and opened_amount<.01 and not finished and not encounters.interacting
 
 func simulate_train(dt: float) -> void:
     var requested := float(brake)/4. if not emergency else 1.
@@ -533,6 +551,7 @@ func make_person(index: int,at: Vector3) -> Node3D:
     if pack==null: return null
     var p := Node3D.new()
     p.name = CAST[index].capitalize()
+    p.set_meta("cast_index",index)
     p.add_child(pack.instantiate())
     add_child(p)
     p.position = at
@@ -568,6 +587,7 @@ func stage_people() -> void:
         current_group = next_stop
         next_spawn = GROUP[next_stop]
     if next_spawn>=GROUP[next_stop+1]: return
+    if next_spawn==get_meta("preview_actor_index",-1): next_spawn+=1;return
     var late := next_spawn==GRANDMOTHER and next_stop==GRANDMOTHER_STOP
     if late and distance_to_stop()>36.: return
     var s: float = Route.STOPS[next_stop]
@@ -660,7 +680,7 @@ func move_people(dt: float) -> void:
                 leaving.reparent(self)
                 leaving.set_meta("walk_out",line.position_at(5.72,.18,Route.STOPS[next_stop]-7.1))
                 departing.append(leaving)
-                delivered += 1
+                if not leaving.get_meta("ejected",false): delivered += 1
                 if leaving==grandfather: notify("Дедушка вышел на остановке")
                 leaving = null
             else: leaving.set_meta("exit_step",step+1)
@@ -682,6 +702,7 @@ func move_people(dt: float) -> void:
                     player.speed_scale = 1.0
                     notify("Бабушка успела сесть")
                 onboard.append(boarding)
+                encounters.on_board(boarding)
                 boarded += 1
                 boarding = null
             else: boarding.set_meta("entry_step",step+1)
@@ -755,12 +776,13 @@ func _physics_process(dt: float) -> void:
         audio_roll.pitch_scale = .67+moving*.087
         audio_motor.volume_db = -22.+throttle*2.0 if traction_allowed() and throttle>0 else -60.
         audio_motor.pitch_scale = .77+moving*.105
-        switch_hint = "" if third_person else cab.read_controls(view)
+        switch_hint = "" if third_person or encounters.interacting else cab.read_controls(view)
     else:
         audio_roll.volume_db = -60.
         audio_motor.volume_db = -60.
     var amps := throttle*70.0 if traction_allowed() else 0.
     cab.update_instruments(dt,absf(velocity)*3.6,pressure*6.,amps,throttle,brake,reverser,master,doors_open,wiper)
+    encounters.tick(dt)
     ui.refresh(self)
 
 func is_processing_passengers() -> bool:

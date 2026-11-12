@@ -234,9 +234,9 @@ func setup(game: Node) -> void:
     alert_row.add_child(alert_text)
 
     controls_panel = card(hud,Color("#292c36a4"),false)
-    anchor(controls_panel,Control.PRESET_BOTTOM_LEFT,17,-205,193,-33)
+    anchor(controls_panel,Control.PRESET_BOTTOM_LEFT,17,-226,193,-33)
     var keys := col(controls_panel,2)
-    for item in [["A / D","Тяга"],["Q / E","Тормоз"],["Z","Реверсор"],["K","Питание"],["F","Двери"],["Space","Экстр. тормоз"],["B","Звонок"],["L / V","Фара / дворник"]]:
+    for item in [["A / D","Тяга"],["Q / E","Тормоз"],["Z","Реверсор"],["K","Питание"],["F","Двери"],["Space","Экстр. тормоз"],["B","Звонок"],["L / V","Фара / дворник"],["G","Пассажиры"]]:
         var key_row := row(keys,6)
         var key := text(item[0],12,AMBER,true)
         key.custom_minimum_size.x = 53
@@ -463,9 +463,9 @@ func refresh(g: Node) -> void:
     elif meters<100.0 and kmh>0:
         msg = "Тормозите к отметке F"
     alert_text.text = msg
-    alert_card.visible = not msg.is_empty()
+    alert_card.visible = not msg.is_empty() and not g.encounters.interacting
     subtitle.text = g.spoken_caption
-    subtitle.get_parent().visible = not subtitle.text.is_empty()
+    subtitle.get_parent().visible = not subtitle.text.is_empty() and g.preferences.subtitles
     var control: String = g.switch_hint
     interaction.text = ""
     if not control.is_empty():

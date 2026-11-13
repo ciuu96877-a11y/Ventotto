@@ -1,0 +1,23 @@
+area: Початок гри
+folder: start
+features:
+  - name: Головне меню
+    page: features/start/main-menu.md
+    links: [README.md, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/display.gd, outputs/Ventotto/main.gd, outputs/Ventotto/main.tscn, outputs/Ventotto/project.godot]
+    tests: []
+  - name: Вибір складності
+    page: features/start/difficulty.md
+    links: [README.md, outputs/Ventotto/display.gd, outputs/Ventotto/main.gd]
+    code: [outputs/Ventotto/display.gd, outputs/Ventotto/main.gd, outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/route.gd, outputs/Ventotto/weather.gd]
+    tests: []
+  - name: Пауза
+    page: features/start/pause.md
+    links: [README.md]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/display.gd]
+    tests: []
+  - name: Налаштування
+    page: features/start/settings.md
+    links: [README.md]
+    code: [outputs/Ventotto/preferences.gd, outputs/Ventotto/main.gd]
+    tests: []

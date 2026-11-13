@@ -1,0 +1,33 @@
+area: Керування трамваєм
+folder: driving
+features:
+  - name: Як рушити з місця
+    page: features/driving/get-moving.md
+    links: [README.md, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/display.gd]
+    tests: []
+  - name: Розгін і гальмування
+    page: features/driving/speed-and-braking.md
+    links: [README.md]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/cab.gd]
+    tests: []
+  - name: Екстрене гальмування
+    page: features/driving/emergency-brake.md
+    links: [README.md]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/rail_dynamics.gd]
+    tests: []
+  - name: Задній хід
+    page: features/driving/reverse.md
+    links: [README.md, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/display.gd]
+    tests: []
+  - name: Кабіна і прилади
+    page: features/driving/cab.md
+    links: [README.md, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/cab.gd, outputs/Ventotto/driver.gd, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/assets/driver_cab.glb.import]
+    tests: []
+  - name: Фара, двірник і дзвінок
+    page: features/driving/lights-wiper-bell.md
+    links: [README.md]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/cab.gd, outputs/Ventotto/weather.gd]
+    tests: []

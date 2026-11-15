@@ -21,4 +21,4 @@
 
 ## Базовий коміт
 
-Вікі написана за кодом коміту `031d960` (Add solo passenger encounters, settings and natural driver gestures).
+Вікі написана за кодом коміту `1b7b0af` (Publish Web build to GitHub Pages from main).

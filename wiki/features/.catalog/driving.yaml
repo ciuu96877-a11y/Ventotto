@@ -24,10 +24,15 @@ features:
   - name: Кабіна і прилади
     page: features/driving/cab.md
     links: [README.md, outputs/Ventotto/display.gd]
-    code: [outputs/Ventotto/cab.gd, outputs/Ventotto/driver.gd, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/assets/driver_cab.glb.import]
+    code: [outputs/Ventotto/cab.gd, outputs/Ventotto/driver.gd, outputs/Ventotto/hands.gd, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/assets/driver_cab.glb.import]
     tests: []
   - name: Фара, двірник і дзвінок
     page: features/driving/lights-wiper-bell.md
     links: [README.md]
     code: [outputs/Ventotto/main.gd, outputs/Ventotto/cab.gd, outputs/Ventotto/weather.gd]
+    tests: []
+  - name: Встати й ходити
+    page: features/driving/standing.md
+    links: [README.md, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/driver.gd, outputs/Ventotto/passenger_events.gd, outputs/Ventotto/display.gd]
     tests: []

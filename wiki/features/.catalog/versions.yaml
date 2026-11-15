@@ -4,10 +4,10 @@ features:
   - name: Гра на комп'ютері
     page: features/versions/desktop.md
     links: [README.md]
-    code: ["outputs/Ventotto/Play Ventotto.cmd", outputs/Ventotto/export_presets.cfg, outputs/Ventotto/project.godot]
+    code: ["outputs/Ventotto/Play Ventotto.cmd", outputs/Ventotto/export_presets.cfg, outputs/Ventotto/project.godot, outputs/Ventotto/main.gd]
     tests: []
   - name: Гра в браузері
     page: features/versions/web.md
     links: [README.md]
-    code: [.github/workflows/web.yml, outputs/Ventotto/export_presets.cfg, outputs/Ventotto/web_world.scn, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/preferences.gd]
+    code: [.github/workflows/web.yml, outputs/Ventotto/export_presets.cfg, outputs/Ventotto/web_world.scn, outputs/Ventotto/main.gd, outputs/Ventotto/route.gd, outputs/Ventotto/npc_life.gd, outputs/Ventotto/display.gd, outputs/Ventotto/preferences.gd]
     tests: []

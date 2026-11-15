@@ -24,10 +24,10 @@ features:
   - name: Місто навколо
     page: features/route/city.md
     links: [README.md]
-    code: [outputs/Ventotto/route.gd, outputs/Ventotto/main.gd, outputs/Ventotto/track_collision.gd, outputs/Ventotto/assets/street_kit.glb.import, outputs/Ventotto/assets/lviv_landmarks.glb.import]
+    code: [outputs/Ventotto/route.gd, outputs/Ventotto/main.gd, outputs/Ventotto/npc_life.gd, outputs/Ventotto/preferences.gd, outputs/Ventotto/track_collision.gd, outputs/Ventotto/assets/street_kit.glb.import, outputs/Ventotto/assets/lviv_landmarks.glb.import]
     tests: []
-  - name: Дощ і мокрі рейки
+  - name: Погода, дощ і калюжі
     page: features/route/rain.md
     links: [README.md, outputs/Ventotto/display.gd]
-    code: [outputs/Ventotto/weather.gd, outputs/Ventotto/route.gd, outputs/Ventotto/main.gd, outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/rain_world.gdshader, outputs/Ventotto/rain_glass.gdshader, outputs/Ventotto/rain_splash.gdshader, outputs/Ventotto/wet_road.gdshader]
+    code: [outputs/Ventotto/weather.gd, outputs/Ventotto/route.gd, outputs/Ventotto/main.gd, outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/display.gd, outputs/Ventotto/rain_world.gdshader, outputs/Ventotto/rain_glass.gdshader, outputs/Ventotto/rain_splash.gdshader, outputs/Ventotto/wet_road.gdshader]
     tests: []

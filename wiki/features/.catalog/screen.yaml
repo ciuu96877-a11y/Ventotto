@@ -9,7 +9,7 @@ features:
   - name: Панелі на екрані
     page: features/screen/hud.md
     links: [README.md]
-    code: [outputs/Ventotto/display.gd, outputs/Ventotto/passenger_events.gd]
+    code: [outputs/Ventotto/display.gd, outputs/Ventotto/passenger_events.gd, outputs/Ventotto/npc_life.gd]
     tests: []
   - name: Підказки
     page: features/screen/hints.md

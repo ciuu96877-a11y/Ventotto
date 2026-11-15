@@ -4,7 +4,12 @@ features:
   - name: Посадка і висадка
     page: features/passengers/boarding.md
     links: [README.md]
-    code: [outputs/Ventotto/main.gd, outputs/Ventotto/passenger_events.gd]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/npc_life.gd, outputs/Ventotto/passenger_events.gd, outputs/Ventotto/display.gd]
+    tests: []
+  - name: Життя пасажирів і розмови
+    page: features/passengers/life.md
+    links: [README.md]
+    code: [outputs/Ventotto/npc_life.gd, outputs/Ventotto/hands.gd, outputs/Ventotto/main.gd, outputs/Ventotto/preferences.gd, outputs/Ventotto/assets/voice/chatter]
     tests: []
   - name: Голосові оголошення
     page: features/passengers/announcements.md
@@ -19,12 +24,17 @@ features:
   - name: Дідусь поспішає вийти
     page: features/passengers/hurrying-grandpa.md
     links: []
-    code: [outputs/Ventotto/main.gd]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/npc_life.gd]
     tests: []
   - name: Заробіток і репутація
     page: features/passengers/earnings.md
     links: [README.md]
     code: [outputs/Ventotto/passenger_events.gd]
+    tests: []
+  - name: Удар по пасажиру
+    page: features/passengers/hitting.md
+    links: [README.md, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/passenger_events.gd, outputs/Ventotto/npc_life.gd, outputs/Ventotto/driver.gd]
     tests: []
 subareas:
   - name: Складні пасажири
@@ -33,7 +43,7 @@ subareas:
       - name: Розмова з пасажиром
         page: features/passengers/difficult/talking.md
         links: [README.md, outputs/Ventotto/passenger_events.gd]
-        code: [outputs/Ventotto/passenger_events.gd, outputs/Ventotto/main.gd, outputs/Ventotto/driver.gd]
+        code: [outputs/Ventotto/passenger_events.gd, outputs/Ventotto/main.gd, outputs/Ventotto/driver.gd, outputs/Ventotto/npc_life.gd]
         tests: []
       - name: Пасажир напідпитку
         page: features/passengers/difficult/drunk.md
@@ -57,6 +67,6 @@ subareas:
         tests: []
       - name: Швидкі сценарії
         page: features/passengers/difficult/quick-scenarios.md
-        links: [README.md]
+        links: [README.md, outputs/Ventotto/passenger_events.gd]
         code: [outputs/Ventotto/passenger_events.gd, outputs/Ventotto/main.gd]
         tests: []

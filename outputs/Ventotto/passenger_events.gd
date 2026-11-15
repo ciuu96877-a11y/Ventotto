@@ -1,6 +1,14 @@
 extends Node
 ## Passenger encounters run alongside boarding and never move a running tram.
+const SCENARIOS := ["drunk","grandma","fare"]
+const HIT_RATING := 8 # Reputation lost for hitting a passenger.
+const HIT_FINE := 20 # Docked from the shift's pay for the same.
+const SCENARIO_NAMES := ["Пасажир напідпитку","Невдоволена бабуся","Перевірка квитків"]
+static var career_file := "user://career.cfg"
 var game: Node3D
+var unlocked := {}
+var scenario_buttons: Array[Button] = []
+var scenario_hint: Label
 var actor: Node3D
 var kind := ""
 var phase := "idle"
@@ -15,7 +23,9 @@ var attack_clock := 0.0
 var attack_cooldown := 0.0
 var actor_recoil := 0.0
 var actor_rest: Vector3
+const Hands = preload("res://hands.gd")
 var actor_skeleton: Skeleton3D
+var actor_hands := {}
 var actor_pose: Array[Quaternion] = []
 var elapsed := 0.0
 var smooth_seconds := 0.0
@@ -84,14 +94,45 @@ func setup(owner_game: Node3D) -> void:
     game.ui.anchor(scenario_panel,Control.PRESET_CENTER_RIGHT,-370,-155,-30,155)
     scenario_panel.mouse_filter=Control.MOUSE_FILTER_STOP
     var scenarios:VBoxContainer=game.ui.col(scenario_panel,10)
-    scenarios.add_child(game.ui.text("СЛОЖНЫЕ ПАССАЖИРЫ",19,game.ui.AMBER,true))
-    scenarios.add_child(game.ui.text("Короткие сценарии на остановке",13,game.ui.FAINT))
-    var names:=["Пассажир навеселе","Недовольная бабушка","Проверка билетов"]
-    for i in names.size():
-        var button:Button=game.ui.menu_button(names[i])
-        button.pressed.connect(preview.bind(["drunk","grandma","fare"][i]))
+    scenarios.add_child(game.ui.text("СКЛАДНІ ПАСАЖИРИ",19,game.ui.AMBER,true))
+    scenario_hint=game.ui.text("",13,game.ui.FAINT)
+    scenario_hint.custom_minimum_size.x=300
+    scenario_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+    scenarios.add_child(scenario_hint)
+    var career:=ConfigFile.new()
+    career.load(career_file)
+    for i in SCENARIOS.size():
+        unlocked[SCENARIOS[i]]=bool(career.get_value("scenarios",SCENARIOS[i],false))
+        var button:Button=game.ui.menu_button("")
+        button.add_theme_stylebox_override("disabled",game.ui.style(Color("#4b5464"),9,10,6,false))
+        button.add_theme_color_override("font_disabled_color",Color("#aab2c0"))
+        button.pressed.connect(request_preview.bind(SCENARIOS[i]))
         scenarios.add_child(button)
+        scenario_buttons.append(button)
+    refresh_scenarios()
     refresh()
+
+## A scenario can be replayed from the menu only after it has come up in a regular shift.
+func refresh_scenarios() -> void:
+    var locked:=0
+    for i in SCENARIOS.size():
+        var open:bool=unlocked.get(SCENARIOS[i],false)
+        if not open:locked+=1
+        scenario_buttons[i].disabled=not open
+        scenario_buttons[i].text=SCENARIO_NAMES[i] if open else "Закрито · трапиться в рейсі"
+    scenario_hint.text="Короткі сценарії на зупинці" if locked==0 else "Сценарій відкривається після того, як пасажир трапиться у звичайному рейсі."
+
+func request_preview(which: String) -> void:
+    if unlocked.get(which,false):preview(which)
+
+func unlock(which: String) -> void:
+    if unlocked.get(which,false):return
+    unlocked[which]=true
+    var career:=ConfigFile.new()
+    career.load(career_file)
+    career.set_value("scenarios",which,true)
+    career.save(career_file)
+    refresh_scenarios()
 
 func voice(clip: String) -> void:
     var file:="res://assets/voice/events/"+clip+".mp3"
@@ -112,7 +153,7 @@ func on_board(person: Node3D) -> void:
 
 func preview(which: String) -> void:
     if game.driving: return
-    game.begin_run(1)
+    game.begin_run()
     var index:int={"drunk":2,"grandma":8,"fare":4}[which]
     game.set_meta("preview_actor_index",index)
     var person:Node3D=game.make_person(index,Vector3.ZERO)
@@ -136,15 +177,16 @@ func start_event(which: String,person: Node3D) -> void:
     actor_rest=person.position
     actor.set_meta("encounter_busy",true)
     encountered[which]=true
+    unlock(which)
     phase="approach"
     agitation=35.0
     resolve=100.0
     health=100.0
     stamina=100.0
     elapsed=0.0
-    message={"drunk":"Пассажир шумит и мешает людям.\n«Чего встал? Мне ехать надо!»","grandma":"«Ты картошку везёшь или людей?\nНа каждом торможении сумка летает!»","fare":"«Я всего одну остановку.\nДавайте в этот раз без билета?»"}[kind]
+    message={"drunk":"Пасажир галасує й заважає людям.\n«Чого стоїмо? Мені їхати треба! Давай, рушай вже!»","grandma":"«Ти картоплю везеш чи людей?\nНа кожному гальмуванні сумка літає!»","fare":"«Мені лише одну зупинку.\nМоже, цього разу без квитка?»"}[kind]
     voice(kind)
-    game.notify("Пассажир зовёт водителя · G после остановки")
+    game.notify("Пасажир кличе водія · G після зупинки")
 
 func find_person(index: int) -> Node3D:
     for person in game.onboard:
@@ -152,8 +194,8 @@ func find_person(index: int) -> Node3D:
     return null
 
 func enter() -> void:
-    if not is_instance_valid(actor): game.notify("Пока никто не зовёт водителя");return
-    if absf(game.velocity)>.12: game.notify("Сначала остановите вагон, затем нажмите G");return
+    if not is_instance_valid(actor): game.notify("Поки ніхто не кличе водія");return
+    if absf(game.velocity)>.12: game.notify("Спершу зупиніть вагон, потім натисніть G");return
     if phase not in ["approach","waiting"]: return
     game.throttle=0
     game.brake=4
@@ -192,6 +234,7 @@ func set_actor_animation(active: bool) -> void:
     if not active:
         actor_skeleton=actor.find_children("*","Skeleton3D",true,false)[0]
         actor_skeleton.reset_bone_poses()
+        actor_hands=Hands.rig(actor_skeleton)
         actor_pose.clear()
         for i in actor_skeleton.get_bone_count():actor_pose.append(actor_skeleton.get_bone_pose_rotation(i))
     elif is_instance_valid(actor_skeleton):
@@ -228,31 +271,31 @@ func attack() -> void:
     game.driver.punch()
     impact(false)
     if counter: attack_clock=0.0;attack_hit=false
-    message="Удачный контрудар" if counter else "Пассажир отступил"
+    message="Вдалий контрудар" if counter else "Пасажир відступив"
     if resolve<=0.0:
         reputation=maxi(0,reputation-3)
-        finish("Пассажир прекратил драку. Конфликт стоил репутации.",0,0)
+        finish("Пасажир припинив бійку. Конфлікт коштував репутації.",0,0)
 
 func choose(option: int) -> void:
     if phase=="defeat":game.restart_run();return
     if phase=="result":leave();return
     if phase=="fight":
-        if option==0 and help_seconds<0.0:help_seconds=12.0;message="Диспетчер вызвал помощь. Продержитесь.";voice("help")
+        if option==0 and help_seconds<0.0:help_seconds=12.0;message="Диспетчер викликав допомогу. Протримайтеся.";voice("help")
         elif option==1:
-            finish("Вы закрылись в кабине. Диспетчер займётся нарушителем.",-3,0)
+            finish("Ви зачинилися в кабіні. Порушником займеться диспетчер.",-3,0)
             leave()
         return
     if phase!="dialogue":return
     if kind=="drunk":
         if option==0:
-            if agitation<65.0:finish("Разговор помог. Пассажир успокоился.",6,0)
-            else:message="Он уже слишком разозлился и замахивается.";start_fight()
+            if agitation<65.0:finish("Розмова допомогла. Пасажир заспокоївся.",6,0)
+            else:message="Він уже надто розлютився й замахується.";start_fight()
         elif option==1:eject()
         elif option==2:start_fight()
         else:
             phase="help"
             help_seconds=8.0
-            message="Диспетчер вызвал помощь. Вагон удерживается тормозом."
+            message="Диспетчер викликав допомогу. Вагон утримується гальмом."
             voice("help")
     elif kind=="grandma":
         if option==0:
@@ -260,34 +303,35 @@ func choose(option: int) -> void:
             smooth_seconds=0.0
             rough_seconds=0.0
             elapsed=0.0
-            result_message="20 секунд плавной езды: без резких разгонов и торможений."
+            result_message="20 секунд плавної їзди: без різких розгонів і гальмувань."
             voice("promise")
             leave()
             set_actor_animation(true)
-        elif option==1:finish("Вы извинились и помогли устроиться удобнее.",3,0)
-        elif option==2:finish("Бабушка обещала жалобу в депо.",-10,-20)
+            game.life.send_home(actor)
+        elif option==1:finish("Ви перепросили й допомогли влаштуватися зручніше.",3,0)
+        elif option==2:finish("Бабуся пообіцяла поскаржитися в депо.",-10,-20)
         else:leave();phase="waiting"
     elif kind=="fare":
         if option==0:
             actor.set_meta("paid",true)
-            finish("Билет оплачен: +15 грн.",3,15)
-        elif option==1:finish("Вы ограничились предупреждением.",1,0)
+            finish("Квиток оплачено: +15 грн.",3,15)
+        elif option==1:finish("Ви обмежилися попередженням.",1,0)
         elif option==2:eject()
         else:leave();phase="waiting"
     refresh()
 
 func eject() -> void:
     if not game.doors_open or absf(game.distance_to_stop())>2.45:
-        message="Высадка возможна на остановке с открытыми дверями. F — двери; G — вернуться к управлению."
+        message="Висадити можна на зупинці з відчиненими дверима. F — двері; G — повернутися до керування."
         return
     actor.set_meta("destination",game.next_stop)
     actor.set_meta("ejected",true)
     if not game.outgoing.has(actor):game.outgoing.append(actor)
-    finish("Пассажир выходит на остановке.",2,0,true)
+    finish("Пасажир виходить на зупинці.",2,0,true)
 
 func finish(text: String,rep: int,money: int,ejected:=false) -> void:
     reputation=clampi(reputation+rep,0,100)
-    cash=maxi(0,cash+money)
+    cash+=money
     result_message=text
     result_time=5.0
     phase="result"
@@ -296,11 +340,26 @@ func finish(text: String,rep: int,money: int,ejected:=false) -> void:
         actor.set_meta("encounter_busy",false)
         set_actor_animation(true)
         if ejected:actor=null
+        else:game.life.send_home(actor)
     game.driver.guard=false
     game.driver.combat=false
     voice("calm" if rep>=0 else "complaint")
     if interacting:Input.mouse_mode=Input.MOUSE_MODE_VISIBLE
     game.notify(text)
+
+## The driver hit a passenger: a complaint, a fine docked from the pay, and they get off at the next stop.
+func struck(person: Node3D) -> void:
+    reputation=maxi(0,reputation-HIT_RATING)
+    cash-=HIT_FINE
+    impact(false)
+    var female:bool=person.get_meta("life_female",false)
+    voice("complaint" if female else "fight")
+    game.life.flinch(person,"Я це так не залишу! У депо на тебе поскаржуся!" if female else "Ти чого штовхаєшся? Руки прибери!")
+    if not person.get_meta("encounter_busy",false) and game.onboard.has(person) and int(person.get_meta("destination",0))>game.next_stop:
+        person.set_meta("destination",game.next_stop)
+        person.set_meta("ejected",true)
+    game.notify("Удар по пасажиру · репутація −%d · штраф %d грн" % [HIT_RATING,HIT_FINE])
+    refresh()
 
 func handle_input(event: InputEvent) -> bool:
     if not game.driving or game.paused or game.derailed or game.finished:return false
@@ -320,7 +379,9 @@ func handle_input(event: InputEvent) -> bool:
             if interacting:
                 if phase=="fight":choose(1)
                 else:leave();phase="waiting" if phase=="dialogue" else phase
-            else:enter()
+            # G goes to a passenger who is calling once the tram has stopped; otherwise the driver just stands up or sits down.
+            elif is_instance_valid(actor) and phase in ["approach","waiting"] and absf(game.velocity)<=.12:enter()
+            else:game.toggle_stance()
             get_viewport().set_input_as_handled()
             return true
         if interacting:
@@ -354,10 +415,8 @@ func animate_actor(dt: float) -> void:
                 var extension:=sin(clampf((attack_clock-1.50)/.47,0,1)*PI)
                 target=target.lerp(Vector3(-.08,1.35,.63),extension)
         bend_actor_arm(side,target)
-        for finger in ["index","middle","ring","pinky","thumb"]:
-            for part in ["01","02","03"]:
-                var id:=actor_skeleton.find_bone(finger+"_"+part+"_"+side)
-                if id>=0:actor_skeleton.set_bone_pose_rotation(id,actor_pose[id]*Quaternion(Vector3.RIGHT,.60 if phase=="fight" else .05))
+        var fingers:Dictionary=Hands.shape(actor_hands,side,1.15 if phase=="fight" else .3)
+        for id:int in fingers:actor_skeleton.set_bone_pose_rotation(id,fingers[id])
     actor.position.z=2.95-sin(actor_recoil/.45*PI)*.24
     actor.position.x=sin(elapsed*1.1)*.035
     actor.rotation.y=atan2(-actor.position.x,4.40-actor.position.z)
@@ -407,8 +466,9 @@ func tick(dt: float) -> void:
     elif phase in ["approach","waiting"]:
         if not is_instance_valid(actor) or not game.onboard.has(actor):phase="idle";actor=null
         else:
-            if game.walk_to(actor,Vector3(0,1.082,2.95),dt,1.1):phase="waiting"
-            actor.rotation.y=0.0
+            if game.life.rise(actor):
+                if game.walk_to(actor,Vector3(0,1.082,2.95),dt,1.1):phase="waiting"
+                actor.rotation.y=0.0
             agitation=minf(100.0,agitation+dt*(.28+maxf(0.0,absf(game.acceleration)-.8)*6.0))
     elif phase=="fight":
         game.driver.guard=blocking_requested
@@ -416,8 +476,8 @@ func tick(dt: float) -> void:
         if attack_clock>=1.78 and not attack_hit:
             attack_hit=true
             var blocked:bool=game.driver.guard and stamina>=9.0
-            if blocked:stamina-=9.0;resolve-=4.0;message="Удар заблокирован"
-            else:health-=10.0+game.difficulty*3.0;message="Пропущен удар"
+            if blocked:stamina-=9.0;resolve-=4.0;message="Удар заблоковано"
+            else:health-=13.0;message="Пропущено удар"
             impact(blocked)
             if health<=0.0:
                 health=0.0
@@ -428,65 +488,63 @@ func tick(dt: float) -> void:
         if attack_clock>2.55:attack_clock=0.0;attack_hit=false
         if help_seconds>=0.0:
             help_seconds-=dt
-            if help_seconds<=0.0:finish("Помощь прибыла. Нарушитель успокоился.",1,0)
+            if help_seconds<=0.0:finish("Допомога прибула. Порушник заспокоївся.",1,0)
     elif phase=="help":
         help_seconds-=dt
-        if help_seconds<=0.0:finish("Диспетчер помог разрешить конфликт.",4,0)
+        if help_seconds<=0.0:finish("Диспетчер допоміг залагодити конфлікт.",4,0)
     elif phase=="smooth":
-        if is_instance_valid(actor):game.walk_to(actor,actor_rest,dt,1.0)
         var jerk:float=absf(game.acceleration-last_acceleration)/maxf(dt,.001)
         if absf(game.velocity)>1.0:
             if absf(game.acceleration)<.95 and jerk<2.4:smooth_seconds+=dt
             else:rough_seconds+=dt
-        if smooth_seconds>=20.0:finish("Бабушка довольна: «Вот теперь хорошо!» Чаевые +10 грн.",8,10)
-        elif rough_seconds>=3.5:finish("Обещание нарушено. Бабушка написала жалобу.",-6,0)
+        if smooth_seconds>=20.0:finish("Бабуся задоволена: «От тепер добре!» Чайові +10 грн.",8,10)
+        elif rough_seconds>=3.5:finish("Обіцянку порушено. Бабуся написала скаргу.",-6,0)
     elif phase=="result":
         result_time-=dt
-        if is_instance_valid(actor) and not game.outgoing.has(actor):game.walk_to(actor,actor_rest,dt,1.1)
         if result_time<=0.0 and not interacting:phase="idle";actor=null
     if phase in ["dialogue","fight","help","defeat"]:animate_actor(dt)
     last_acceleration=game.acceleration
     if game.finished and not journey_saved:
         journey_saved=true
         var career:=ConfigFile.new()
-        career.load("user://career.cfg")
+        career.load(career_file)
         career.set_value("career","completed_runs",int(career.get_value("career","completed_runs",0))+1)
         career.set_value("career","best_reputation",maxi(reputation,int(career.get_value("career","best_reputation",0))))
         career.set_value("career","total_income",cash+int(career.get_value("career","total_income",0)))
-        career.save("user://career.cfg")
+        career.save(career_file)
     refresh()
 
 func refresh() -> void:
     if panel==null:return
-    score.text="ЗА СМЕНУ  %d грн\nРЕПУТАЦИЯ  %d / 100" % [cash,reputation]
+    score.text="ЗА ЗМІНУ  %d грн\nРЕПУТАЦІЯ  %d / 100" % [cash,reputation]
     scenario_panel.visible=not game.driving and not game.ui.choosing_mode() and not game.preferences.opened
     panel.visible=interacting
     cue.get_parent().visible=not interacting and phase!="idle"
-    if phase=="smooth":cue.text="Плавная езда: %d / 20 с\nБез резких ускорений" % int(smooth_seconds)
+    if phase=="smooth":cue.text="Плавна їзда: %d / 20 с\nБез різких прискорень" % int(smooth_seconds)
     elif phase=="result":cue.text=result_message
-    else:cue.text="Пассажир зовёт водителя\nG — поговорить после остановки"
+    else:cue.text="Пасажир кличе водія\nG — поговорити після зупинки"
     if not interacting:return
     var labels:Array[String]=[]
-    title.text={"drunk":"Пассажир навеселе","grandma":"Недовольная бабушка","fare":"Проверка билетов"}.get(kind,"")
+    title.text={"drunk":"Пасажир напідпитку","grandma":"Невдоволена бабуся","fare":"Перевірка квитків"}.get(kind,"")
     dialogue.text=message
-    meters.text="Репутация %d / 100   ·   Касса %d грн" % [reputation,cash]
+    meters.text="Репутація %d / 100   ·   Каса %d грн" % [reputation,cash]
     if phase=="fight":
-        title.text="КОНФЛИКТ В САЛОНЕ"
-        dialogue.text="Замах! Блокируйте!" if attack_clock>.95 and attack_clock<1.78 else message
-        meters.text="Здоровье %d   Выносливость %d\nНапор пассажира %d\nЛКМ — удар · ПКМ / Shift — блок\n" % [int(health),int(stamina),maxi(0,int(resolve))]
-        if help_seconds>=0.0:meters.text+="Помощь: %d с" % ceili(help_seconds)
-        labels=["1  Вызвать помощь","2  Отступить в кабину"]
+        title.text="КОНФЛІКТ У САЛОНІ"
+        dialogue.text="Замах! Блокуйте!" if attack_clock>.95 and attack_clock<1.78 else message
+        meters.text="Здоров’я %d   Витривалість %d\nНатиск пасажира %d\nЛКМ — удар · ПКМ / Shift — блок\n" % [int(health),int(stamina),maxi(0,int(resolve))]
+        if help_seconds>=0.0:meters.text+="Допомога: %d с" % ceili(help_seconds)
+        labels=["1  Викликати допомогу","2  Відступити до кабіни"]
     elif phase=="defeat":
-        title.text="РЕЙС ПРЕРВАН"
-        dialogue.text="Водитель пострадал в драке. Рейс продолжить нельзя."
-        labels=["Enter  Начать заново"]
-    elif phase=="result":dialogue.text=result_message;labels=["Enter  Вернуться к управлению"]
-    elif phase=="help":meters.text="Помощь: %d с" % ceili(help_seconds)
+        title.text="РЕЙС ПЕРЕРВАНО"
+        dialogue.text="Водій постраждав у бійці. Продовжити рейс неможливо."
+        labels=["Enter  Почати заново"]
+    elif phase=="result":dialogue.text=result_message;labels=["Enter  Повернутися до керування"]
+    elif phase=="help":meters.text="Допомога: %d с" % ceili(help_seconds)
     elif kind=="drunk":
-        meters.text+="\nРаздражение: %d / 100" % int(agitation)
-        labels=["1  Спокойно поговорить","2  Высадить на остановке","3  Оттеснить от кабины","4  Вызвать помощь"]
-    elif kind=="grandma":labels=["1  Обещать плавную езду","2  Помочь устроиться удобнее","3  Начать спорить","4  Вернуться к управлению"]
-    elif kind=="fare":labels=["1  Попросить оплатить билет","2  Сделать предупреждение","3  Высадить на остановке","4  Вернуться к управлению"]
+        meters.text+="\nРоздратування: %d / 100" % int(agitation)
+        labels=["1  Спокійно поговорити","2  Висадити на зупинці","3  Відтіснити від кабіни","4  Викликати допомогу"]
+    elif kind=="grandma":labels=["1  Пообіцяти плавну їзду","2  Допомогти влаштуватися зручніше","3  Почати сперечатися","4  Повернутися до керування"]
+    elif kind=="fare":labels=["1  Попросити оплатити квиток","2  Зробити попередження","3  Висадити на зупинці","4  Повернутися до керування"]
     for i in choices.size():
         choices[i].visible=i<labels.size()
         if i<labels.size():choices[i].text=labels[i]

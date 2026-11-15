@@ -8,7 +8,8 @@ var rain_material: ShaderMaterial
 var splash_material: ShaderMaterial
 var glass_materials: Array[ShaderMaterial] = []
 var glass_front: Array[Dictionary] = []
-var wet := false
+var rain_level := 0.0
+var puddle_level := 0.0
 var weather_time := 0.0
 var mask_timer := 0.0
 var last_wiper_angle := -0.40
@@ -94,18 +95,23 @@ func setup(tram: Node3D, model: Node3D, cabin: Node3D, line: Node3D) -> void:
             material.set_shader_parameter("wiped",true)
             material.set_shader_parameter("wiped_mask",texture)
             glass_front.append({"image":mask,"texture":texture,"pane":pane,"size":quad.size})
-    set_wet(false)
+    set_weather(0.0,0.0)
 
-func set_wet(value: bool) -> void:
-    wet=value
-    rain.visible=value
-    splashes.visible=value
-    for material in glass_materials: material.set_shader_parameter("intensity",1.0 if value else 0.0)
-    for material in [rain_material,splash_material]: material.set_shader_parameter("intensity",1.0 if value else 0.0)
-    for material in road_materials: material.set_shader_parameter("wetness",1.0 if value else 0.0)
+## `falling` is the rain right now, `lying` the water already on the ground; both 0..1.
+func set_weather(falling: float,lying: float) -> void:
+    rain_level=falling
+    puddle_level=lying
+    rain.visible=falling>.01
+    splashes.visible=falling>.01
+    for material in glass_materials: material.set_shader_parameter("intensity",maxf(falling,lying*.3))
+    for material in [rain_material,splash_material]: material.set_shader_parameter("intensity",falling)
+    for material in road_materials:
+        material.set_shader_parameter("wetness",maxf(falling,lying))
+        material.set_shader_parameter("puddles",lying)
+        material.set_shader_parameter("rain",falling)
 
 func update_weather(dt: float, camera: Camera3D, wiper: bool, paused: bool) -> void:
-    if not wet: return
+    if rain_level<=.01 and puddle_level<=.01: return
     if not paused: weather_time+=dt
     var origin := camera.global_position.snapped(Vector3(8,1000,8))
     origin.y=0.0

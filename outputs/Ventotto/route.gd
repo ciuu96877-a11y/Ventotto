@@ -69,17 +69,19 @@ func turn_at(s: float,lookahead := 0.) -> int:
             return i
     return -1
 
-func apply_weather(wet: bool) -> void:
-    weather_environment.fog_density = .019 if wet else .004
-    weather_environment.fog_light_color = Color("#7c8a99") if wet else Color("#c3cbcd")
-    weather_environment.ambient_light_energy = .48 if wet else .63
-    weather_environment.ambient_light_color = Color("#98adc1") if wet else Color("#d0dde4")
-    daylight.light_energy = .30 if wet else .72
+## 0 is a clear day with crisp shadows, 1 a downpour under a low grey sky.
+func apply_weather(wet: float) -> void:
+    weather_environment.fog_density = lerpf(.004,.019,wet)
+    weather_environment.fog_light_color = Color("#c3cbcd").lerp(Color("#7c8a99"),wet)
+    weather_environment.ambient_light_energy = lerpf(.56,.48,wet)
+    weather_environment.ambient_light_color = Color("#d0dde4").lerp(Color("#98adc1"),wet)
+    daylight.light_energy = lerpf(.95,.30,wet)
+    daylight.shadow_opacity = lerpf(1.0,.55,wet) # Overcast light throws soft, pale shadows.
     var sky_material := weather_environment.sky.sky_material as ProceduralSkyMaterial
-    sky_material.sky_top_color = Color("#465969") if wet else Color("#7894aa")
-    sky_material.sky_horizon_color = Color("#8091a0") if wet else Color("#d7d9d6")
+    sky_material.sky_top_color = Color("#7894aa").lerp(Color("#465969"),wet)
+    sky_material.sky_horizon_color = Color("#d7d9d6").lerp(Color("#8091a0"),wet)
     for m in wet_materials:
-        m.roughness = .48 if wet else .89
+        m.roughness = lerpf(.89,.48,wet)
 
 func position_at(x: float, y: float, s: float) -> Vector3:
     var u := clampf((s-START)/STEP,0,coords.size()-1.001)

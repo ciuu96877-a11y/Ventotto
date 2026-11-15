@@ -21,38 +21,38 @@ func setup(owner_game:Node3D) -> void:
         quality=clampi(saved.get_value("graphics","quality",2),0,2)
         subtitles=saved.get_value("audio","subtitles",true)
     game.ui.anchor(game.ui.title_card,Control.PRESET_CENTER_LEFT,45,-235,479,235)
-    var settings:Button=game.ui.menu_button("Настройки")
+    var settings:Button=game.ui.menu_button("Налаштування")
     game.ui.action_button.get_parent().add_child(settings)
     settings.pressed.connect(show_settings)
     panel=game.ui.card(game.ui.menu,Color("#222b3af5"))
     game.ui.anchor(panel,Control.PRESET_CENTER,-285,-250,285,250)
     panel.mouse_filter=Control.MOUSE_FILTER_STOP
     var content:VBoxContainer=game.ui.col(panel,13)
-    content.add_child(game.ui.text("НАСТРОЙКИ",29,game.ui.WHITE,true))
-    slider(content,"Общая громкость",0,100,volume,"volume")
-    slider(content,"Голоса",0,100,voice_volume,"voice_volume")
-    slider(content,"Чувствительность мыши",.3,2.5,sensitivity,"sensitivity")
-    slider(content,"Угол обзора",60,95,fov,"fov")
+    content.add_child(game.ui.text("НАЛАШТУВАННЯ",29,game.ui.WHITE,true))
+    slider(content,"Загальна гучність",0,100,volume,"volume")
+    slider(content,"Голоси",0,100,voice_volume,"voice_volume")
+    slider(content,"Чутливість миші",.3,2.5,sensitivity,"sensitivity")
+    slider(content,"Кут огляду",60,95,fov,"fov")
     var graphics:HBoxContainer=game.ui.row(content,10)
-    graphics.add_child(game.ui.text("Качество графики",15,game.ui.FAINT))
+    graphics.add_child(game.ui.text("Якість графіки",15,game.ui.FAINT))
     var select:=OptionButton.new()
-    for label in ["Низкое","Среднее","Высокое"]:select.add_item(label)
+    for label in ["Низька","Середня","Висока"]:select.add_item(label)
     select.selected=quality
     select.size_flags_horizontal=Control.SIZE_EXPAND_FILL
     graphics.add_child(select)
     select.item_selected.connect(func(value:int):quality=value;apply();dirty_time=.4)
     var captions:=CheckButton.new()
-    captions.text="Субтитры"
+    captions.text="Субтитри"
     captions.button_pressed=subtitles
     content.add_child(captions)
     captions.toggled.connect(func(value:bool):subtitles=value;dirty_time=.4)
     if not OS.has_feature("web"):
         var fullscreen:=CheckButton.new()
-        fullscreen.text="Полный экран"
+        fullscreen.text="Повний екран"
         fullscreen.button_pressed=DisplayServer.window_get_mode()==DisplayServer.WINDOW_MODE_FULLSCREEN
         fullscreen.toggled.connect(func(value:bool):DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if value else DisplayServer.WINDOW_MODE_WINDOWED))
         content.add_child(fullscreen)
-    var back:Button=game.ui.menu_button("Сохранить и вернуться")
+    var back:Button=game.ui.menu_button("Зберегти й повернутися")
     content.add_child(back)
     back.pressed.connect(close_settings)
     panel.hide()
@@ -83,7 +83,6 @@ func slider(parent:Node,caption:String,minimum:float,maximum:float,value:float,p
 func show_settings() -> void:
     opened=true
     game.ui.title_card.hide()
-    game.ui.modes.hide()
     if game.encounters!=null:game.encounters.scenario_panel.hide()
     panel.show()
 
@@ -98,11 +97,18 @@ func apply() -> void:
     game.view.fov=fov
     if is_instance_valid(game.announcements):game.announcements.volume_db=linear_to_db(maxf(.0001,voice_volume/100.0))-4.0
     if game.encounters!=null:game.encounters.voice_player.volume_db=linear_to_db(maxf(.0001,voice_volume/100.0))-4.0
+    if game.life!=null:game.life.voice_db=linear_to_db(maxf(.0001,voice_volume/100.0))-5.0
     game.weather.rain.multimesh.visible_instance_count=[3000,6500,10000][quality]
     game.weather.splashes.multimesh.visible_instance_count=[90,200,360][quality]
     game.view.far=[180.0,250.0,310.0][quality]
     game.third_view.far=game.view.far
-    game.line.daylight.shadow_enabled=quality>0 and not OS.has_feature("web")
+    # Shadows stay on at every quality level on desktop; quality sets how far they reach.
+    var sun:DirectionalLight3D=game.line.daylight
+    sun.shadow_enabled=not OS.has_feature("web")
+    sun.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if quality==0 else DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+    sun.directional_shadow_max_distance=[55.0,95.0,140.0][quality]
+    sun.directional_shadow_blend_splits=quality>0
+    game.beam.shadow_enabled=quality>0 and not OS.has_feature("web")
 
 func save() -> void:
     var file:=ConfigFile.new()

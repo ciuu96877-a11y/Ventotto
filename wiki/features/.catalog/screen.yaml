@@ -1,0 +1,23 @@
+area: Екран і камера
+folder: screen
+features:
+  - name: Вид з кабіни і ззовні
+    page: features/screen/cameras.md
+    links: [README.md]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/driver.gd, outputs/Ventotto/track_collision.gd]
+    tests: []
+  - name: Панелі на екрані
+    page: features/screen/hud.md
+    links: [README.md]
+    code: [outputs/Ventotto/display.gd, outputs/Ventotto/passenger_events.gd]
+    tests: []
+  - name: Підказки
+    page: features/screen/hints.md
+    links: []
+    code: [outputs/Ventotto/display.gd, outputs/Ventotto/main.gd]
+    tests: []
+  - name: Схема маршруту
+    page: features/screen/route-map.md
+    links: [README.md]
+    code: [outputs/Ventotto/display.gd, outputs/Ventotto/route.gd]
+    tests: []

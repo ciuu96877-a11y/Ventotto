@@ -1,0 +1,33 @@
+area: Маршрут і місто
+folder: route
+features:
+  - name: Маршрут і зупинки
+    page: features/route/route-and-stops.md
+    links: [README.md, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/route.gd, outputs/Ventotto/main.gd]
+    tests: []
+  - name: Зупинка біля позначки F
+    page: features/route/stopping.md
+    links: [outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/route.gd, outputs/Ventotto/display.gd]
+    tests: []
+  - name: Обмеження швидкості і повороти
+    page: features/route/speed-limits.md
+    links: [outputs/Ventotto/display.gd, outputs/Ventotto/rail_dynamics.gd]
+    code: [outputs/Ventotto/route.gd, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/rail_dynamics.gd]
+    tests: []
+  - name: Перехрестя і світлофори
+    page: features/route/crossings.md
+    links: [outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/route.gd, outputs/Ventotto/main.gd]
+    tests: []
+  - name: Місто навколо
+    page: features/route/city.md
+    links: [README.md]
+    code: [outputs/Ventotto/route.gd, outputs/Ventotto/main.gd, outputs/Ventotto/track_collision.gd, outputs/Ventotto/assets/street_kit.glb.import, outputs/Ventotto/assets/lviv_landmarks.glb.import]
+    tests: []
+  - name: Дощ і мокрі рейки
+    page: features/route/rain.md
+    links: [README.md, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/weather.gd, outputs/Ventotto/route.gd, outputs/Ventotto/main.gd, outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/rain_world.gdshader, outputs/Ventotto/rain_glass.gdshader, outputs/Ventotto/rain_splash.gdshader, outputs/Ventotto/wet_road.gdshader]
+    tests: []

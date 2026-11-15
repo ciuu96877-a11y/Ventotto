@@ -53,8 +53,10 @@ var libraries := {}
 var blob: PlaneMesh
 var outfits := {}
 var seats: Array[Vector2] = []
-var movers: Array[Node3D] = []
-var homing: Array[Node3D] = []
+# These lists can outlive the people in them (a pedestrian leaves the street mid-gesture),
+# so they are untyped and cleaned by index: erasing a freed object from a typed array is unsafe.
+var movers := []
+var homing := []
 var sway := Vector2.ZERO
 var sway_speed := Vector2.ZERO
 var clips := {}
@@ -69,6 +71,7 @@ var close_talk_pool: Array[String] = ["TalkOne","TalkBoth","Shrug","TalkOpen"]
 var listen_pool: Array[String] = ["Nod","Nod","Listen","Laugh","HeadShake"]
 var talks: Array[Dictionary] = []
 var shouts: Array[Dictionary] = []
+var fidgets := []
 var recent: Array[int] = []
 var near_next := 5.0
 var street_next := 2.0
@@ -240,12 +243,12 @@ func sit_pose(female: bool,folded: bool) -> Dictionary:
         "rl":["bench",Vector3(-spread,0,.405)],"rlp":Vector3(-knee,.6,.8)}
     if folded:
         pose.merge({
-            "l":["hip",Vector3(.05,.135,.20)],"lp":Vector3(.9,-.5,-.3),"lh":[Vector3(-.65,-.15,.75),Vector3(-.3,-.9,0)],"lf":.35,
-            "r":["hip",Vector3(-.04,.125,.22)],"rp":Vector3(-.9,-.5,-.3),"rh":[Vector3(.65,-.15,.75),Vector3(.3,-.9,0)],"rf":.35})
+            "l":["hip",Vector3(.05,.135,.20)],"lp":Vector3(.9,-.5,-.3),"lh":[Vector3(-.65,-.15,.75),Vector3(-.3,-.9,0)],
+            "r":["hip",Vector3(-.04,.125,.22)],"rp":Vector3(-.9,-.5,-.3),"rh":[Vector3(.65,-.15,.75),Vector3(.3,-.9,0)]})
     else:
         pose.merge({
-            "l":["hip",Vector3(spread+.035,.12,.25)],"lp":Vector3(.8,-.6,-.4),"lh":[Vector3(0,-.12,1),Vector3(0,-1,-.1)],"lf":.22,
-            "r":["hip",Vector3(-spread-.035,.12,.25)],"rp":Vector3(-.8,-.6,-.4),"rh":[Vector3(0,-.12,1),Vector3(0,-1,-.1)],"rf":.22})
+            "l":["hip",Vector3(spread+.035,.12,.25)],"lp":Vector3(.8,-.6,-.4),"lh":[Vector3(0,-.12,1),Vector3(0,-1,-.1)],
+            "r":["hip",Vector3(-spread-.035,.12,.25)],"rp":Vector3(-.8,-.6,-.4),"rh":[Vector3(0,-.12,1),Vector3(0,-1,-.1)]})
     return pose
 
 func skeleton_path(clip: Animation) -> String:
@@ -254,24 +257,10 @@ func skeleton_path(clip: Animation) -> String:
             return str(clip.track_get_path(track)).get_slice(":",0)
     return ""
 
-## Imported clips drop bones that never move. Give them a resting key so a hand or
-## finger posed by a gesture returns to rest whenever Idle or Walk takes over, then
-## lower the arms once per clip so people stand and walk with their arms at their sides.
+## Lowers the arms once per imported clip, so people stand and walk with their arms at their sides.
 func complete(clip: Animation,sk: Skeleton3D) -> void:
     var node := skeleton_path(clip)
-    if node.is_empty(): return
-    var relaxed := {}
-    if not clip.has_meta("life_relaxed"):
-        var hand_rig := Hands.rig(sk)
-        for side in ["l","r"]: relaxed.merge(Hands.shape(hand_rig,side,FINGER_REST))
-    for bone in pose_bones:
-        var id := sk.find_bone(bone)
-        var path := NodePath(node+":"+bone)
-        if id<0 or clip.find_track(path,Animation.TYPE_ROTATION_3D)>=0: continue
-        var track := clip.add_track(Animation.TYPE_ROTATION_3D)
-        clip.track_set_path(track,path)
-        clip.rotation_track_insert_key(track,0.0,relaxed.get(id,sk.get_bone_rest(id).basis.get_rotation_quaternion()))
-    if clip.has_meta("life_relaxed"): return
+    if node.is_empty() or clip.has_meta("life_relaxed"): return
     clip.set_meta("life_relaxed",true)
     var tracks := {}
     var live: Array[Quaternion] = []
@@ -350,7 +339,10 @@ func bake(sk: Skeleton3D,source: Animation,spec: Array,flip: bool,loop: bool) ->
     if node.is_empty(): return null
     for bone in pose_bones+(["pelvis","thigh_l","calf_l","foot_l","thigh_r","calf_r","foot_r"] as Array[String]):
         if not ids.has(bone): return null
+    # Bones the source clip does not animate rest where `still` leaves them: relaxed fingers, the rest at rest.
     var base := rest.duplicate()
+    var loose: Dictionary = calm(sk)
+    for id: int in loose: base[id] = loose[id]
     for track in source.get_track_count():
         if source.track_get_type(track)!=Animation.TYPE_ROTATION_3D or source.track_get_key_count(track)==0: continue
         var bone := str(source.track_get_path(track).get_concatenated_subnames())
@@ -512,6 +504,7 @@ func adopt(person: Node3D) -> void:
     person.set_meta("life_pitch",.95+float(index*7%5)*.03)
     person.set_meta("life_sway",.8+float(index*5%7)*.07)
     person.set_meta("life_next",clock+randf_range(1.5,9.0))
+    still(person)
     var casters: Array[MeshInstance3D] = []
     for mesh: MeshInstance3D in person.find_children("*","MeshInstance3D",true,false):
         var part := str(mesh.name).to_lower()
@@ -551,6 +544,13 @@ func shade(person: Node3D,on: bool) -> void:
     for mesh: MeshInstance3D in person.get_meta("life_casters",[]):
         mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if on else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
+## In the browser, people seen only from a distance go without lashes and brows.
+func simplify(person: Node3D) -> void:
+    if not OS.has_feature("web"): return
+    for mesh: MeshInstance3D in person.find_children("*","MeshInstance3D",true,false):
+        var part := str(mesh.name).to_lower()
+        if "eyebrow" in part or "eyelash" in part: mesh.hide()
+
 ## Recolours the clothes so repeated models on a busy street do not look like twins.
 func restyle(person: Node3D,variant: int) -> void:
     var tone: Color = TONES[posmod(variant,TONES.size())]
@@ -567,6 +567,30 @@ func restyle(person: Node3D,variant: int) -> void:
                 dyed.albedo_color = dyed.albedo_color*tone
                 outfits[key] = dyed
             mesh.set_surface_override_material(surface,outfits[key])
+
+## The relaxed finger pose of a rig: bone index -> rotation.
+func calm(sk: Skeleton3D) -> Dictionary:
+    var hand_rig := Hands.rig(sk)
+    var out := {}
+    for side in ["l","r"]: out.merge(Hands.shape(hand_rig,side,FINGER_REST))
+    return out
+
+## Puts the bones that Idle, Walk and Sit never animate into their resting pose.
+func still(person: Node3D) -> void:
+    var found := person.find_children("*","Skeleton3D",true,false)
+    if found.is_empty(): return
+    var sk := found[0] as Skeleton3D
+    var player: AnimationPlayer = person.get_meta("player")
+    var clip := player.get_animation(player.current_animation) if player.has_animation(player.current_animation) else null
+    var node := skeleton_path(clip) if clip!=null else ""
+    var loose: Dictionary = calm(sk)
+    for bone in ["hand_l","hand_r","spine_03","neck_01"]:
+        var id := sk.find_bone(bone)
+        if id>=0: loose[id] = sk.get_bone_rest(id).basis.get_rotation_quaternion()
+    for id: int in loose:
+        # Leave alone what the current clip is animating, such as hands resting on the thighs.
+        if clip!=null and clip.find_track(NodePath(node+":"+sk.get_bone_name(id)),Animation.TYPE_ROTATION_3D)>=0: continue
+        sk.set_bone_pose_rotation(id,loose[id])
 
 func current(person: Node3D) -> String:
     if not is_instance_valid(person) or not person.has_meta("player"): return "?"
@@ -597,6 +621,8 @@ func perform(person: Node3D,clip := "",pool: Array[String] = idle_pool) -> float
     person.set_meta("life_last",clip)
     player.play(full,.3)
     player.queue("sit/Sit" if seated else "Idle")
+    person.set_meta("life_tidy",3) # Scans to wait after the gesture, so the blend out of it has finished.
+    if not fidgets.has(person): fidgets.append(person)
     return player.get_animation(full).length/maxf(player.speed_scale,.1)
 
 func idle_round(people: Array,pool: Array[String]) -> void:
@@ -673,6 +699,7 @@ func settle(person: Node3D) -> void:
 func unsettle(person: Node3D) -> void:
     if not person.has_meta("life_yaw"): return
     person.remove_meta("life_yaw")
+    if person.has_meta("life_posed"): person.remove_meta("life_posed")
     person.rotation = Vector3(0,person.rotation.y,0)
 
 ## True once the passenger is on their feet and free to walk; starts getting up otherwise.
@@ -697,9 +724,10 @@ func send_home(person: Node3D) -> void:
     if is_instance_valid(person) and person.get_meta("life_seat","")=="" and not homing.has(person): homing.append(person)
 
 func move_people(dt: float) -> void:
-    for person in movers.duplicate():
+    for i in range(movers.size()-1,-1,-1):
+        var person = movers[i]
         if not is_instance_valid(person):
-            movers.erase(person)
+            movers.remove_at(i)
             continue
         var move: Array = person.get_meta("life_move")
         move[4] = minf(1.0,move[4]+dt/move[5])
@@ -707,13 +735,14 @@ func move_people(dt: float) -> void:
         person.position = (move[0] as Vector3).lerp(move[1],eased)
         person.rotation = Vector3(0,lerp_angle(move[2],move[3],eased),0)
         if move[4]>=1.0:
-            movers.erase(person)
+            movers.remove_at(i)
             person.set_meta("life_seat",move[6])
-    for person in homing.duplicate():
+    for i in range(homing.size()-1,-1,-1):
+        var person = homing[i]
         if not is_instance_valid(person) or not game.onboard.has(person) or game.transit.has(person):
-            homing.erase(person)
+            homing.remove_at(i)
         elif game.walk_to(person,person.get_meta("seat",person.position),dt,1.1):
-            homing.erase(person)
+            homing.remove_at(i)
             settle(person)
 
 ## Bodies follow the tram: people lean back when it pulls away, forward when it brakes
@@ -735,6 +764,9 @@ func posture(dt: float) -> void:
         person.set_meta("life_turned",turn)
         var lean := Vector3(sway.x,0,sway.y)*(.42 if seated else 1.0)*float(person.get_meta("life_sway",1.0))
         var tilt := Basis(Vector3.UP.cross(lean).normalized(),lean.length()) if lean.length()>.0004 else Basis.IDENTITY
+        var stamp := Vector3(lean.x,turn,lean.z)
+        if stamp.distance_to(person.get_meta("life_posed",Vector3.INF))<.0003: continue
+        person.set_meta("life_posed",stamp)
         person.basis = tilt*Basis(Vector3.UP,float(person.get_meta("life_yaw"))+turn)
         if seated:
             # Lean from the hips, which stay on the bench.
@@ -941,6 +973,19 @@ func tick(dt: float) -> void:
     scan -= dt
     if scan>0.0: return
     scan = .35
+    # Once a gesture is over or was cut short, put hands and fingers back to their resting pose.
+    for i in range(fidgets.size()-1,-1,-1):
+        var person = fidgets[i]
+        if not is_instance_valid(person):
+            fidgets.remove_at(i)
+        elif gesture(current(person)):
+            person.set_meta("life_tidy",3)
+        else:
+            var left: int = int(person.get_meta("life_tidy",0))-1
+            person.set_meta("life_tidy",left)
+            if left<=0:
+                fidgets.remove_at(i)
+                still(person)
     idle_round(game.onboard,ride_pool)
     idle_round(game.queued,stop_pool)
     hail()

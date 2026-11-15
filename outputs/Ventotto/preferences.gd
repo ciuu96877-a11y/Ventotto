@@ -104,10 +104,11 @@ func apply() -> void:
     game.third_view.far=game.view.far
     # Shadows stay on at every quality level on desktop; quality sets how far they reach.
     var sun:DirectionalLight3D=game.line.daylight
-    sun.shadow_enabled=not OS.has_feature("web")
-    sun.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if quality==0 else DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
-    sun.directional_shadow_max_distance=[55.0,95.0,140.0][quality]
-    sun.directional_shadow_blend_splits=quality>0
+    if sun!=null:
+        sun.shadow_enabled=not OS.has_feature("web")
+        sun.directional_shadow_mode=DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS if quality==0 else DirectionalLight3D.SHADOW_PARALLEL_4_SPLITS
+        sun.directional_shadow_max_distance=[55.0,95.0,140.0][quality]
+        sun.directional_shadow_blend_splits=quality>0
     game.beam.shadow_enabled=quality>0 and not OS.has_feature("web")
 
 func save() -> void:

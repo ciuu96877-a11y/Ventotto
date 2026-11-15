@@ -75,8 +75,9 @@ func apply_weather(wet: float) -> void:
     weather_environment.fog_light_color = Color("#c3cbcd").lerp(Color("#7c8a99"),wet)
     weather_environment.ambient_light_energy = lerpf(.56,.48,wet)
     weather_environment.ambient_light_color = Color("#d0dde4").lerp(Color("#98adc1"),wet)
-    daylight.light_energy = lerpf(.95,.30,wet)
-    daylight.shadow_opacity = lerpf(1.0,.55,wet) # Overcast light throws soft, pale shadows.
+    if daylight!=null:
+        daylight.light_energy = lerpf(.95,.30,wet)
+        daylight.shadow_opacity = lerpf(1.0,.55,wet) # Overcast light throws soft, pale shadows.
     var sky_material := weather_environment.sky.sky_material as ProceduralSkyMaterial
     sky_material.sky_top_color = Color("#7894aa").lerp(Color("#465969"),wet)
     sky_material.sky_horizon_color = Color("#d7d9d6").lerp(Color("#8091a0"),wet)
@@ -367,7 +368,23 @@ func build_crossing(i: int) -> void:
         traffic_box(car,Vector3(x,.67,1.746),Vector3(.29,.14,.037),traffic_material(Color("#f2ddb7")))
     car.hide()
 
+## A saved copy of the city (the browser version) comes back without its links to the sun
+## and the crossing cars. Find them again among the children.
+func relink() -> void:
+    if daylight==null:
+        for child in get_children():
+            if child is DirectionalLight3D: daylight = child
+    var linked := crossing_cars.size()==JUNCTIONS.size()
+    for car in crossing_cars:
+        if car==null: linked = false
+    if linked: return
+    crossing_cars.clear()
+    for child in get_children():
+        # A car is a bare group of nine boxes; the signal head next to it has only one.
+        if child.get_class()=="Node3D" and child.get_child_count()>=5: crossing_cars.append(child)
+
 func update_crossings(time: float,tram: float) -> void:
+    if crossing_cars.size()<JUNCTIONS.size() or crossing_lenses.size()<JUNCTIONS.size(): return
     for i in JUNCTIONS.size():
         var s: float = JUNCTIONS[i]
         var phase := junction_phase(i,time)

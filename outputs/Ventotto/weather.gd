@@ -8,6 +8,7 @@ var rain_material: ShaderMaterial
 var splash_material: ShaderMaterial
 var glass_materials: Array[ShaderMaterial] = []
 var glass_front: Array[Dictionary] = []
+var applied := false
 var rain_level := 0.0
 var puddle_level := 0.0
 var weather_time := 0.0
@@ -99,6 +100,8 @@ func setup(tram: Node3D, model: Node3D, cabin: Node3D, line: Node3D) -> void:
 
 ## `falling` is the rain right now, `lying` the water already on the ground; both 0..1.
 func set_weather(falling: float,lying: float) -> void:
+    if absf(falling-rain_level)<.002 and absf(lying-puddle_level)<.002 and applied: return
+    applied=true
     rain_level=falling
     puddle_level=lying
     rain.visible=falling>.01

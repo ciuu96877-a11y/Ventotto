@@ -152,6 +152,7 @@ func _ready() -> void:
         line = load("res://web_world.scn").instantiate()
         print("WEB_INIT: world loaded")
         add_child(line)
+        line.relink()
     else:
         line = Route.new()
         add_child(line)
@@ -769,7 +770,7 @@ func stage_people() -> void:
     if current_group!=next_stop:
         current_group = next_stop
         next_spawn = GROUP[next_stop]
-        extras_left = EXTRA_RIDERS if next_stop<Route.STOPS.size()-1 else 0
+        extras_left = (1 if OS.has_feature("web") else EXTRA_RIDERS) if next_stop<Route.STOPS.size()-1 else 0
         stop_order = 0
     var regular: bool = next_spawn<GROUP[next_stop+1]
     if regular and next_spawn==get_meta("preview_actor_index",-1):
@@ -815,8 +816,12 @@ func stage_people() -> void:
         life.restyle(p,index+order)
     queued.append(p)
 
+## The browser version keeps the same life on a smaller scale: every animated person costs it far more.
 func crowd_size() -> int:
-    return 10 if OS.has_feature("web") else CROWD[preferences.quality]
+    return 6 if OS.has_feature("web") else CROWD[preferences.quality]
+
+func chat_pairs() -> int:
+    return 1 if OS.has_feature("web") else CHAT_PAIRS
 
 func spawn_walker(slot: int,s: float) -> Node3D:
     walker_serial += 1
@@ -825,6 +830,7 @@ func spawn_walker(slot: int,s: float) -> Node3D:
     var p := make_person((slot*7+walker_serial*5+3)%CAST.size(),line.position_at(x,.178,s))
     if p==null: return null
     life.restyle(p,walker_serial)
+    life.simplify(p)
     var speed := .95+fposmod(slot*.37+walker_serial*.21,1.)*.6
     p.set_meta("lateral",x)
     p.set_meta("s",s)
@@ -874,8 +880,9 @@ func walk_city(dt: float) -> void:
         p.rotation.y = line.heading(s)+(0. if stride>0 else PI)
         var close := absf(s-distance)<65.
         if close!=p.get_meta("life_shaded",true): life.shade(p,close)
+        if OS.has_feature("web"): p.visible = absf(s-distance)<85.
     # Pairs of neighbours stand by the wall; npc_life.gd runs their conversations.
-    if chatters.size()<CHAT_PAIRS*2:
+    if chatters.size()<chat_pairs()*2:
         var pair := chatters.size()/2
         var both: Array[Node3D] = []
         for k in 2:
@@ -885,6 +892,7 @@ func walk_city(dt: float) -> void:
             for k in 2:
                 both[k].set_meta("stander",pair)
                 life.restyle(both[k],pair*2+k+1)
+                life.simplify(both[k])
             chatters.append_array(both)
             place_chatters(pair,distance+24.+pair*41.)
         else:

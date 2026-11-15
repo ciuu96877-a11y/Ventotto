@@ -9,5 +9,5 @@ features:
   - name: Гра в браузері
     page: features/versions/web.md
     links: [README.md]
-    code: [outputs/Ventotto/export_presets.cfg, outputs/Ventotto/web_world.scn, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/preferences.gd]
+    code: [.github/workflows/web.yml, outputs/Ventotto/export_presets.cfg, outputs/Ventotto/web_world.scn, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/preferences.gd]
     tests: []

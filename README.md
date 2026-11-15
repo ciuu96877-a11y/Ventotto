@@ -29,6 +29,8 @@
 
 ## Сборка
 
-В `export_presets.cfg` сохранены Windows и Web. Пути к пользовательским шаблонам экспорта настроены для исходного рабочего компьютера; на другом компьютере их нужно выбрать заново в настройках экспорта Godot. Web-сборка использует однопоточный шаблон и заранее подготовленную сцену `web_world.scn`.
+В `export_presets.cfg` сохранены Windows и Web. Для Windows путь к пользовательскому шаблону экспорта настроен для исходного рабочего компьютера; на другом компьютере его нужно выбрать заново в настройках экспорта Godot. Web использует стандартный однопоточный шаблон Godot 4.7.2 и заранее подготовленную сцену `web_world.scn`.
 
-Публичная версия: https://ventotto-lviv-tram.pink-moon-8624.chatgpt.site/
+Каждый push в `main` собирает Web-версию в GitHub Actions (`.github/workflows/web.yml`) и публикует её на GitHub Pages: https://ciuu96877-a11y.github.io/Ventotto/
+
+Прежняя публичная версия: https://ventotto-lviv-tram.pink-moon-8624.chatgpt.site/

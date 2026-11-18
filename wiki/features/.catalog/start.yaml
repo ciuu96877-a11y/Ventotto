@@ -4,7 +4,7 @@ features:
   - name: Головне меню
     page: features/start/main-menu.md
     links: [README.md, outputs/Ventotto/display.gd]
-    code: [outputs/Ventotto/display.gd, outputs/Ventotto/main.gd, outputs/Ventotto/main.tscn, outputs/Ventotto/project.godot]
+    code: [outputs/Ventotto/display.gd, outputs/Ventotto/main.gd, outputs/Ventotto/achievements.gd, outputs/Ventotto/main.tscn, outputs/Ventotto/project.godot]
     tests: []
   - name: Пауза
     page: features/start/pause.md
@@ -14,5 +14,15 @@ features:
   - name: Налаштування
     page: features/start/settings.md
     links: [README.md]
-    code: [outputs/Ventotto/preferences.gd, outputs/Ventotto/main.gd, outputs/Ventotto/npc_life.gd]
+    code: [outputs/Ventotto/preferences.gd, outputs/Ventotto/main.gd, outputs/Ventotto/npc_life.gd, outputs/Ventotto/tutorial.gd]
+    tests: []
+  - name: Навчання в першому рейсі
+    page: features/start/tutorial.md
+    links: [README.md, outputs/Ventotto/tutorial.gd]
+    code: [outputs/Ventotto/tutorial.gd, outputs/Ventotto/preferences.gd, outputs/Ventotto/main.gd, outputs/Ventotto/cab.gd, outputs/Ventotto/display.gd]
+    tests: []
+  - name: Досягнення
+    page: features/start/achievements.md
+    links: [README.md, outputs/Ventotto/achievements.gd]
+    code: [outputs/Ventotto/achievements.gd, outputs/Ventotto/main.gd, outputs/Ventotto/passenger_events.gd, outputs/Ventotto/display.gd]
     tests: []

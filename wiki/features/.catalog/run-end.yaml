@@ -4,10 +4,10 @@ features:
   - name: Завершення рейсу
     page: features/run-end/finish.md
     links: []
-    code: [outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/passenger_events.gd]
+    code: [outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/passenger_events.gd, outputs/Ventotto/achievements.gd]
     tests: []
   - name: Сходження з рейок
     page: features/run-end/derailment.md
     links: [README.md, outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/crash_body.gd]
-    code: [outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/crash_body.gd, outputs/Ventotto/track_collision.gd, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd]
+    code: [outputs/Ventotto/rail_dynamics.gd, outputs/Ventotto/crash_body.gd, outputs/Ventotto/track_collision.gd, outputs/Ventotto/main.gd, outputs/Ventotto/display.gd, outputs/Ventotto/achievements.gd]
     tests: []

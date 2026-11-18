@@ -22,4 +22,4 @@
 
 ## Базовий коміт
 
-Вікі написана за кодом коміту `f8646ee` (Remove the quick-scenario panel from the main menu).
+Вікі написана за кодом коміту `d3b4777` (Add a first-shift guide and achievements).

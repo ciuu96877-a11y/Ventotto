@@ -762,7 +762,7 @@ func spare_cast() -> int:
     var soon: int = GROUP[mini(next_stop+4,GROUP.size()-1)]
     for n in CAST.size():
         var index := (n*7+next_stop*5+stop_order*3)%CAST.size()
-        if not busy.has(index) and not (index>=GROUP[next_stop] and index<soon) and index!=get_meta("preview_actor_index",-1): return index
+        if not busy.has(index) and not (index>=GROUP[next_stop] and index<soon): return index
     return -1
 
 func stage_people() -> void:
@@ -773,9 +773,6 @@ func stage_people() -> void:
         extras_left = (1 if OS.has_feature("web") else EXTRA_RIDERS) if next_stop<Route.STOPS.size()-1 else 0
         stop_order = 0
     var regular: bool = next_spawn<GROUP[next_stop+1]
-    if regular and next_spawn==get_meta("preview_actor_index",-1):
-        next_spawn += 1
-        return
     var late: bool = regular and next_spawn==GRANDMOTHER and next_stop==GRANDMOTHER_STOP
     var index := next_spawn
     if not regular or (late and distance_to_stop()>36.):

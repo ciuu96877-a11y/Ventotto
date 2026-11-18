@@ -83,7 +83,6 @@ func slider(parent:Node,caption:String,minimum:float,maximum:float,value:float,p
 func show_settings() -> void:
     opened=true
     game.ui.title_card.hide()
-    if game.encounters!=null:game.encounters.scenario_panel.hide()
     panel.show()
 
 func close_settings() -> void:

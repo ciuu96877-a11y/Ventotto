@@ -1,14 +1,9 @@
 extends Node
 ## Passenger encounters run alongside boarding and never move a running tram.
-const SCENARIOS := ["drunk","grandma","fare"]
 const HIT_RATING := 8 # Reputation lost for hitting a passenger.
 const HIT_FINE := 20 # Docked from the shift's pay for the same.
-const SCENARIO_NAMES := ["Пасажир напідпитку","Невдоволена бабуся","Перевірка квитків"]
 static var career_file := "user://career.cfg"
 var game: Node3D
-var unlocked := {}
-var scenario_buttons: Array[Button] = []
-var scenario_hint: Label
 var actor: Node3D
 var kind := ""
 var phase := "idle"
@@ -41,7 +36,6 @@ var meters: Label
 var choices: Array[Button] = []
 var cue: Label
 var score: Label
-var scenario_panel: PanelContainer
 var voice_player: AudioStreamPlayer
 var impact_player: AudioStreamPlayer
 var message := ""
@@ -90,49 +84,7 @@ func setup(owner_game: Node3D) -> void:
         content.add_child(button)
         button.pressed.connect(choose.bind(i))
         choices.append(button)
-    scenario_panel=game.ui.card(game.ui.menu,Color("#222b3aeb"))
-    game.ui.anchor(scenario_panel,Control.PRESET_CENTER_RIGHT,-370,-155,-30,155)
-    scenario_panel.mouse_filter=Control.MOUSE_FILTER_STOP
-    var scenarios:VBoxContainer=game.ui.col(scenario_panel,10)
-    scenarios.add_child(game.ui.text("СКЛАДНІ ПАСАЖИРИ",19,game.ui.AMBER,true))
-    scenario_hint=game.ui.text("",13,game.ui.FAINT)
-    scenario_hint.custom_minimum_size.x=300
-    scenario_hint.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-    scenarios.add_child(scenario_hint)
-    var career:=ConfigFile.new()
-    career.load(career_file)
-    for i in SCENARIOS.size():
-        unlocked[SCENARIOS[i]]=bool(career.get_value("scenarios",SCENARIOS[i],false))
-        var button:Button=game.ui.menu_button("")
-        button.add_theme_stylebox_override("disabled",game.ui.style(Color("#4b5464"),9,10,6,false))
-        button.add_theme_color_override("font_disabled_color",Color("#aab2c0"))
-        button.pressed.connect(request_preview.bind(SCENARIOS[i]))
-        scenarios.add_child(button)
-        scenario_buttons.append(button)
-    refresh_scenarios()
     refresh()
-
-## A scenario can be replayed from the menu only after it has come up in a regular shift.
-func refresh_scenarios() -> void:
-    var locked:=0
-    for i in SCENARIOS.size():
-        var open:bool=unlocked.get(SCENARIOS[i],false)
-        if not open:locked+=1
-        scenario_buttons[i].disabled=not open
-        scenario_buttons[i].text=SCENARIO_NAMES[i] if open else "Закрито · трапиться в рейсі"
-    scenario_hint.text="Короткі сценарії на зупинці" if locked==0 else "Сценарій відкривається після того, як пасажир трапиться у звичайному рейсі."
-
-func request_preview(which: String) -> void:
-    if unlocked.get(which,false):preview(which)
-
-func unlock(which: String) -> void:
-    if unlocked.get(which,false):return
-    unlocked[which]=true
-    var career:=ConfigFile.new()
-    career.load(career_file)
-    career.set_value("scenarios",which,true)
-    career.save(career_file)
-    refresh_scenarios()
 
 func voice(clip: String) -> void:
     var file:="res://assets/voice/events/"+clip+".mp3"
@@ -151,25 +103,6 @@ func on_board(person: Node3D) -> void:
     person.set_meta("paid",index!=4)
     if index!=4: cash+=15
 
-func preview(which: String) -> void:
-    if game.driving: return
-    game.begin_run()
-    var index:int={"drunk":2,"grandma":8,"fare":4}[which]
-    game.set_meta("preview_actor_index",index)
-    var person:Node3D=game.make_person(index,Vector3.ZERO)
-    person.reparent(game.vehicle,false)
-    person.position=Vector3(0,1.082,2.6)
-    person.set_meta("seat",person.position)
-    person.set_meta("seat_index",10)
-    person.set_meta("destination",3)
-    person.set_meta("paid",which!="fare")
-    game.onboard.append(person)
-    game.boarded+=1
-    game.voice_queue.clear()
-    game.announcements.stop()
-    game.spoken_caption=""
-    start_event(which,person)
-
 func start_event(which: String,person: Node3D) -> void:
     if phase!="idle" or not is_instance_valid(person): return
     kind=which
@@ -177,7 +110,6 @@ func start_event(which: String,person: Node3D) -> void:
     actor_rest=person.position
     actor.set_meta("encounter_busy",true)
     encountered[which]=true
-    unlock(which)
     phase="approach"
     agitation=35.0
     resolve=100.0
@@ -517,7 +449,6 @@ func tick(dt: float) -> void:
 func refresh() -> void:
     if panel==null:return
     score.text="ЗА ЗМІНУ  %d грн\nРЕПУТАЦІЯ  %d / 100" % [cash,reputation]
-    scenario_panel.visible=not game.driving and not game.ui.choosing_mode() and not game.preferences.opened
     panel.visible=interacting
     cue.get_parent().visible=not interacting and phase!="idle"
     if phase=="smooth":cue.text="Плавна їзда: %d / 20 с\nБез різких прискорень" % int(smooth_seconds)

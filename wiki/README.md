@@ -22,4 +22,4 @@
 
 ## Базовий коміт
 
-Вікі написана за кодом коміту `d1eacf4` (Keep the web build fast and stable with the new passenger life).
+Вікі написана за кодом коміту `f8646ee` (Remove the quick-scenario panel from the main menu).

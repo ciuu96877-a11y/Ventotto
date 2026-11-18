@@ -65,8 +65,3 @@ subareas:
         links: [README.md]
         code: [outputs/Ventotto/passenger_events.gd, outputs/Ventotto/driver.gd]
         tests: []
-      - name: Швидкі сценарії
-        page: features/passengers/difficult/quick-scenarios.md
-        links: [README.md, outputs/Ventotto/passenger_events.gd]
-        code: [outputs/Ventotto/passenger_events.gd, outputs/Ventotto/main.gd]
-        tests: []

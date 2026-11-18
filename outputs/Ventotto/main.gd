@@ -10,6 +10,8 @@ const Weather = preload("res://weather.gd")
 const PassengerEvents = preload("res://passenger_events.gd")
 const NpcLife = preload("res://npc_life.gd")
 const Preferences = preload("res://preferences.gd")
+const Achievements = preload("res://achievements.gd")
+const Tutorial = preload("res://tutorial.gd")
 const Cab = preload("res://cab.gd")
 const Display = preload("res://display.gd")
 const CAST = ["luca","giulia","samir","elena","amina","marco","mei","matteo","babusia","anna","ravi","didus","sofia","enzo","fatima","yuki","nadia","pietro","ada","noah","clara","ren"]
@@ -99,6 +101,8 @@ var weather: Node3D
 var encounters: Node
 var life: Node
 var preferences: Node
+var achievements: Node
+var tutorial: Node
 var crash_still_time := 0.0
 var rain_loop: AudioStreamPlayer
 var web_chunk_timer := 0.0
@@ -252,6 +256,12 @@ func _ready() -> void:
     encounters=PassengerEvents.new()
     add_child(encounters)
     encounters.setup(self)
+    achievements = Achievements.new()
+    add_child(achievements)
+    achievements.setup(self)
+    tutorial = Tutorial.new()
+    add_child(tutorial)
+    tutorial.setup(self)
     if OS.has_feature("web"): print("WEB_INIT: audio")
     setup_audio()
     preferences.apply()
@@ -486,6 +496,9 @@ func _unhandled_key_input(event: InputEvent) -> void:
     if preferences.opened:
         if key==KEY_ESCAPE:preferences.close_settings()
         return
+    if achievements.opened:
+        if key==KEY_ESCAPE: achievements.close_window()
+        return
     if key==KEY_R:
         toggle_camera()
         return
@@ -622,7 +635,9 @@ func operate(which: String, delta: int) -> void:
             headlights = not headlights
             beam.visible = headlights
             sound("notch")
-        "bell": sound("bell")
+        "bell":
+            sound("bell")
+            achievements.note("bell")
         "emergency":
             if emergency:
                 if absf(velocity)<.12 and throttle==0:
@@ -960,7 +975,9 @@ func use_door(door: int,dt: float) -> void:
         if p.get_meta("boarding"):
             var seat: Vector3 = p.get_meta("seat")
             p.rotation.y = PI/2 if seat.x<0 else -PI/2
-            if p==grandmother: notify("Бабуся встигла сісти")
+            if p==grandmother:
+                notify("Бабуся встигла сісти")
+                achievements.unlock("grandma")
             onboard.append(p)
             life.settle(p)
             encounters.on_board(p)
@@ -970,7 +987,9 @@ func use_door(door: int,dt: float) -> void:
             p.set_meta("walk_out",line.position_at(6.3+randf()*1.6,.179,Route.STOPS[next_stop]+gate+randf_range(-7.,5.)))
             departing.append(p)
             if not p.get_meta("ejected",false): delivered += 1
-            if p==grandfather: notify("Дідусь вийшов на зупинці")
+            if p==grandfather:
+                notify("Дідусь вийшов на зупинці")
+                achievements.unlock("grandpa")
         return
     for q in outgoing:
         var nearest := 0
@@ -1045,6 +1064,8 @@ func _physics_process(dt: float) -> void:
                     child.visible=child.position.distance_to(vehicle.position)<165.
     collision_world.update_near(vehicle.global_position)
     update_camera(dt)
+    tutorial.tick(dt)
+    achievements.tick(dt)
     if derailed:
         derail_time += dt
         velocity = crash.linear_velocity.length()

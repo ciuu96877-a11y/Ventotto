@@ -7,7 +7,9 @@ var sensitivity:=1.0
 var fov:=70.0
 var quality:=2
 var subtitles:=true
+var tutorial:=true # Show the first-shift guide; it switches itself off once done.
 var panel:PanelContainer
+var tutorial_toggle:CheckButton
 var dirty_time:=0.0
 
 func setup(owner_game:Node3D) -> void:
@@ -20,12 +22,13 @@ func setup(owner_game:Node3D) -> void:
         fov=clampf(saved.get_value("view","fov",70.0),60,95)
         quality=clampi(saved.get_value("graphics","quality",2),0,2)
         subtitles=saved.get_value("audio","subtitles",true)
+        tutorial=saved.get_value("help","tutorial",true)
     game.ui.anchor(game.ui.title_card,Control.PRESET_CENTER_LEFT,45,-235,479,235)
     var settings:Button=game.ui.menu_button("Налаштування")
     game.ui.action_button.get_parent().add_child(settings)
     settings.pressed.connect(show_settings)
     panel=game.ui.card(game.ui.menu,Color("#222b3af5"))
-    game.ui.anchor(panel,Control.PRESET_CENTER,-285,-250,285,250)
+    game.ui.anchor(panel,Control.PRESET_CENTER,-285,-272,285,272)
     panel.mouse_filter=Control.MOUSE_FILTER_STOP
     var content:VBoxContainer=game.ui.col(panel,13)
     content.add_child(game.ui.text("НАЛАШТУВАННЯ",29,game.ui.WHITE,true))
@@ -46,6 +49,12 @@ func setup(owner_game:Node3D) -> void:
     captions.button_pressed=subtitles
     content.add_child(captions)
     captions.toggled.connect(func(value:bool):subtitles=value;dirty_time=.4)
+    var guide:=CheckButton.new()
+    guide.text="Навчання"
+    guide.button_pressed=tutorial
+    content.add_child(guide)
+    guide.toggled.connect(func(value:bool):tutorial=value;dirty_time=.4)
+    tutorial_toggle=guide
     if not OS.has_feature("web"):
         var fullscreen:=CheckButton.new()
         fullscreen.text="Повний екран"
@@ -82,6 +91,7 @@ func slider(parent:Node,caption:String,minimum:float,maximum:float,value:float,p
 
 func show_settings() -> void:
     opened=true
+    tutorial_toggle.set_pressed_no_signal(tutorial)
     game.ui.title_card.hide()
     panel.show()
 
@@ -115,6 +125,7 @@ func save() -> void:
     file.set_value("audio","volume",volume)
     file.set_value("audio","voice",voice_volume)
     file.set_value("audio","subtitles",subtitles)
+    file.set_value("help","tutorial",tutorial)
     file.set_value("view","sensitivity",sensitivity)
     file.set_value("view","fov",fov)
     file.set_value("graphics","quality",quality)

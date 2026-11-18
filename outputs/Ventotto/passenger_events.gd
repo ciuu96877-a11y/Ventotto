@@ -205,6 +205,7 @@ func attack() -> void:
     if counter: attack_clock=0.0;attack_hit=false
     message="Вдалий контрудар" if counter else "Пасажир відступив"
     if resolve<=0.0:
+        game.achievements.unlock("fight")
         reputation=maxi(0,reputation-3)
         finish("Пасажир припинив бійку. Конфлікт коштував репутації.",0,0)
 
@@ -220,7 +221,7 @@ func choose(option: int) -> void:
     if phase!="dialogue":return
     if kind=="drunk":
         if option==0:
-            if agitation<65.0:finish("Розмова допомогла. Пасажир заспокоївся.",6,0)
+            if agitation<65.0:game.achievements.unlock("calm");finish("Розмова допомогла. Пасажир заспокоївся.",6,0)
             else:message="Він уже надто розлютився й замахується.";start_fight()
         elif option==1:eject()
         elif option==2:start_fight()
@@ -246,6 +247,7 @@ func choose(option: int) -> void:
     elif kind=="fare":
         if option==0:
             actor.set_meta("paid",true)
+            game.achievements.unlock("ticket")
             finish("Квиток оплачено: +15 грн.",3,15)
         elif option==1:finish("Ви обмежилися попередженням.",1,0)
         elif option==2:eject()
@@ -291,6 +293,7 @@ func struck(person: Node3D) -> void:
         person.set_meta("destination",game.next_stop)
         person.set_meta("ejected",true)
     game.notify("Удар по пасажиру · репутація −%d · штраф %d грн" % [HIT_RATING,HIT_FINE])
+    game.achievements.note("hit")
     refresh()
 
 func handle_input(event: InputEvent) -> bool:
@@ -429,7 +432,7 @@ func tick(dt: float) -> void:
         if absf(game.velocity)>1.0:
             if absf(game.acceleration)<.95 and jerk<2.4:smooth_seconds+=dt
             else:rough_seconds+=dt
-        if smooth_seconds>=20.0:finish("Бабуся задоволена: «От тепер добре!» Чайові +10 грн.",8,10)
+        if smooth_seconds>=20.0:game.achievements.unlock("promise");finish("Бабуся задоволена: «От тепер добре!» Чайові +10 грн.",8,10)
         elif rough_seconds>=3.5:finish("Обіцянку порушено. Бабуся написала скаргу.",-6,0)
     elif phase=="result":
         result_time-=dt
